@@ -1,0 +1,11 @@
+[project]
+name = "mnist-autoresearch"
+version = "0.1.0"
+description = "Minimal MNIST adaptation of Karpathy's autoresearch workflow"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.2",
+    "torchvision>=0.17",
+]
+
