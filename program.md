@@ -12,8 +12,9 @@ To set up a new experiment, work with the user to:
    - `README.md` - repository context.
    - `prepare.py` - fixed constants, data prep, data split, dataloaders, and evaluation.
    - `train.py` - the file you modify.
+   - `modal_run.py` - the remote execution wrapper. Treat this as infrastructure, not a research surface.
    - `program.md` - the experiment protocol.
-4. **Verify data exists**: check that `~/.cache/mnist-autoresearch/` contains the cached data and split. If not, tell the human to run `uv run prepare.py`.
+4. **Verify Modal is ready**: make sure local Modal auth is set up. If needed, tell the human to run `uv run modal setup`.
 5. **Initialize `results.tsv`**: create `results.tsv` with just the header row. The baseline will be recorded after the first run.
 
 ```text
@@ -29,7 +30,7 @@ Once you get confirmation, kick off the experimentation.
 Each experiment runs on a single device. The training script runs for a **fixed time budget of 60 seconds** of wall clock training time. You launch it simply as:
 
 ```bash
-uv run train.py
+uv run modal run modal_run.py > run.log 2>&1
 ```
 
 **What you CAN do:**
@@ -40,9 +41,10 @@ uv run train.py
 **What you CANNOT do:**
 
 - Modify `prepare.py`. It is read-only. It contains the fixed data preparation, train/validation split, dataloading, and evaluation harness.
+- Modify `modal_run.py` unless the user explicitly asks for infrastructure changes.
 - Install new packages or add dependencies. You can only use what is already in `pyproject.toml`.
 - Modify the validation split or evaluation harness.
-- Optimize against the MNIST test set during the loop. The held-out test set is only for the final chosen model via `uv run train.py --final-test`.
+- Optimize against the MNIST test set during the loop. The held-out test set is only for the final chosen model via `uv run modal run modal_run.py --final-test > run.log 2>&1`.
 
 **The goal is simple: get the highest `val_accuracy`.** If two runs tie at the printed precision, the lower `val_loss` wins. If they are still effectively tied, prefer the simpler implementation. Since the time budget is fixed, you do not need to worry much about training time beyond making sure the code actually runs and finishes within budget.
 
@@ -57,7 +59,7 @@ Once the script finishes it prints a summary like this:
 ```text
 ---
 model_name:       linear
-device:           mps
+device:           cuda
 val_accuracy:     0.923400
 val_loss:         0.271100
 training_seconds: 60.0
@@ -71,6 +73,8 @@ You can extract the key metrics from the log file:
 ```bash
 grep "^val_accuracy:\|^val_loss:" run.log
 ```
+
+`run.log` is local. `modal_run.py` runs the training job remotely on Modal but forwards the remote stdout and stderr back to the local process, so redirecting `> run.log 2>&1` still captures the full run output for parsing and crash inspection. Modal requests one small GPU for each run, preferring `T4` and falling back to `L4`.
 
 ## Logging results
 
@@ -103,7 +107,7 @@ The experiment runs on a dedicated branch such as `codex/autoresearch/mar18`. LO
 1. Look at the git state: the current branch and commit you are on.
 2. Tune `train.py` with one experimental idea by directly hacking the code.
 3. `git commit`
-4. Run the experiment: `uv run train.py > run.log 2>&1`
+4. Run the experiment: `uv run modal run modal_run.py > run.log 2>&1`
 5. Read out the results: `grep "^val_accuracy:\|^val_loss:" run.log`
 6. If the grep output is empty, the run crashed. Run `tail -n 50 run.log` to read the Python stack trace and attempt a fix. If you cannot get it to work after a few attempts, give up on that idea.
 7. Record the results in the TSV. Do not commit `results.tsv`; leave it untracked by git.
@@ -121,7 +125,7 @@ The idea is that you are a completely autonomous researcher trying things out. I
 If you select a final best model and need a held-out report, run:
 
 ```bash
-uv run train.py --final-test
+uv run modal run modal_run.py --final-test > run.log 2>&1
 ```
 
 That command is only for the final chosen model, not for day-to-day optimization.

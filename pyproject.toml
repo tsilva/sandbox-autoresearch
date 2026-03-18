@@ -5,7 +5,7 @@ description = "Minimal MNIST adaptation of Karpathy's autoresearch workflow"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "modal>=1.1.0",
     "torch>=2.2",
     "torchvision>=0.17",
 ]
-
