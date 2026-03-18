@@ -8,6 +8,7 @@ linear model, then let the agent iterate on architecture and training choices.
 from __future__ import annotations
 
 import argparse
+import math
 import time
 
 import torch
@@ -20,6 +21,11 @@ TRAIN_BATCH_SIZE = 128
 EVAL_BATCH_SIZE = 1024
 LEARNING_RATE = 1e-3
 WEIGHT_DECAY = 1e-4
+LABEL_SMOOTHING = 0.05
+WARMUP_STEPS = 16
+DECAY_STEPS = 384
+MIN_LR_SCALE = 0.2
+START_LR_SCALE = 0.5
 
 
 def pick_device() -> torch.device:
@@ -97,14 +103,30 @@ def train_model(model: nn.Module, device: torch.device) -> tuple[int, float]:
 
             images = images.to(device)
             labels = labels.to(device)
+            optimizer.param_groups[0]["lr"] = LEARNING_RATE * _learning_rate_scale(num_steps)
 
             optimizer.zero_grad(set_to_none=True)
             logits = model(images)
-            loss = torch.nn.functional.cross_entropy(logits, labels)
+            loss = torch.nn.functional.cross_entropy(
+                logits,
+                labels,
+                label_smoothing=LABEL_SMOOTHING,
+            )
             loss.backward()
             optimizer.step()
 
             num_steps += 1
+
+
+def _learning_rate_scale(step: int) -> float:
+    if step < WARMUP_STEPS:
+        warmup_progress = float(step + 1) / float(WARMUP_STEPS)
+        return START_LR_SCALE + (1.0 - START_LR_SCALE) * warmup_progress
+
+    decay_step = min(step - WARMUP_STEPS, DECAY_STEPS)
+    progress = float(decay_step) / float(max(1, DECAY_STEPS))
+    cosine = 0.5 * (1.0 + math.cos(math.pi * progress))
+    return MIN_LR_SCALE + (1.0 - MIN_LR_SCALE) * cosine
 
 
 def parse_args() -> argparse.Namespace:
