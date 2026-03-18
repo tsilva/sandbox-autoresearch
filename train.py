@@ -13,13 +13,12 @@ import time
 import torch
 import torch.nn as nn
 
-from prepare import INPUT_DIM, NUM_CLASSES, SPLIT_SEED, TIME_BUDGET, evaluate, evaluate_test, make_dataloaders
+from prepare import NUM_CLASSES, SPLIT_SEED, TIME_BUDGET, evaluate, evaluate_test, make_dataloaders
 
-MODEL_NAME = "linear"
-TRAIN_BATCH_SIZE = 256
+MODEL_NAME = "two_stage_cnn"
+TRAIN_BATCH_SIZE = 128
 EVAL_BATCH_SIZE = 1024
-LEARNING_RATE = 0.1
-MOMENTUM = 0.9
+LEARNING_RATE = 1e-3
 WEIGHT_DECAY = 1e-4
 
 
@@ -38,17 +37,30 @@ def synchronize(device: torch.device) -> None:
         torch.mps.synchronize()
 
 
-class LinearClassifier(nn.Module):
+class TwoStageCNN(nn.Module):
     def __init__(self) -> None:
         super().__init__()
-        self.classifier = nn.Linear(INPUT_DIM, NUM_CLASSES)
+        self.features = nn.Sequential(
+            nn.Conv2d(1, 32, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2),
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2),
+        )
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(64 * 7 * 7, 128),
+            nn.ReLU(inplace=True),
+            nn.Linear(128, NUM_CLASSES),
+        )
 
     def forward(self, images: torch.Tensor) -> torch.Tensor:
-        return self.classifier(images.view(images.size(0), -1))
+        return self.classifier(self.features(images))
 
 
 def build_model() -> nn.Module:
-    return LinearClassifier()
+    return TwoStageCNN()
 
 
 def count_parameters(model: nn.Module) -> int:
@@ -60,10 +72,9 @@ def train_model(model: nn.Module, device: torch.device) -> tuple[int, float]:
         train_batch_size=TRAIN_BATCH_SIZE,
         eval_batch_size=EVAL_BATCH_SIZE,
     )
-    optimizer = torch.optim.SGD(
+    optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=LEARNING_RATE,
-        momentum=MOMENTUM,
         weight_decay=WEIGHT_DECAY,
     )
 
