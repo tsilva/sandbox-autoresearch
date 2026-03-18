@@ -16,7 +16,7 @@ import torch.nn as nn
 
 from prepare import NUM_CLASSES, SPLIT_SEED, TIME_BUDGET, evaluate, evaluate_test, make_dataloaders
 
-MODEL_NAME = "double_block_cnn"
+MODEL_NAME = "double_block_cnn_silu"
 TRAIN_BATCH_SIZE = 128
 EVAL_BATCH_SIZE = 1024
 LEARNING_RATE = 1e-3
@@ -54,7 +54,7 @@ class DoubleBlockCNN(nn.Module):
         self.classifier = nn.Sequential(
             nn.Flatten(),
             nn.Linear(96 * 3 * 3, 128),
-            nn.ReLU(inplace=True),
+            nn.SiLU(inplace=True),
             nn.Linear(128, NUM_CLASSES),
         )
 
@@ -63,10 +63,10 @@ class DoubleBlockCNN(nn.Module):
         return nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True),
+            nn.SiLU(inplace=True),
             nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True),
+            nn.SiLU(inplace=True),
             nn.MaxPool2d(kernel_size=2),
         )
 
