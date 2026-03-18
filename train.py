@@ -16,7 +16,7 @@ import torch.nn as nn
 
 from prepare import NUM_CLASSES, SPLIT_SEED, TIME_BUDGET, evaluate, evaluate_test, make_dataloaders
 
-MODEL_NAME = "three_stage_cnn"
+MODEL_NAME = "double_block_cnn"
 TRAIN_BATCH_SIZE = 128
 EVAL_BATCH_SIZE = 1024
 LEARNING_RATE = 1e-3
@@ -43,22 +43,13 @@ def synchronize(device: torch.device) -> None:
         torch.mps.synchronize()
 
 
-class ThreeStageCNN(nn.Module):
+class DoubleBlockCNN(nn.Module):
     def __init__(self) -> None:
         super().__init__()
         self.features = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(32),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2),
-            nn.Conv2d(32, 64, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2),
-            nn.Conv2d(64, 96, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(96),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2),
+            self._double_block(1, 32),
+            self._double_block(32, 64),
+            self._double_block(64, 96),
         )
         self.classifier = nn.Sequential(
             nn.Flatten(),
@@ -67,12 +58,24 @@ class ThreeStageCNN(nn.Module):
             nn.Linear(128, NUM_CLASSES),
         )
 
+    @staticmethod
+    def _double_block(in_channels: int, out_channels: int) -> nn.Sequential:
+        return nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2),
+        )
+
     def forward(self, images: torch.Tensor) -> torch.Tensor:
         return self.classifier(self.features(images))
 
 
 def build_model() -> nn.Module:
-    return ThreeStageCNN()
+    return DoubleBlockCNN()
 
 
 def count_parameters(model: nn.Module) -> int:
