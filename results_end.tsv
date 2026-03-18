@@ -1,0 +1,47 @@
+commit	train_py_sha256	val_accuracy	val_loss	status	description
+c138688	c0faff0ca127a82e286a8c85f7a2cfa658d14849f488c74acbf6fe955d0f3b34	0.889400	0.453784	keep	baseline linear model
+73cfa08	24e1697dd7013be60accf52d828e3f73a4cdafc56197d4e6c9ad9aa9c588cf7f	0.986400	0.042318	discard	3-block CNN with BatchNorm, max-pooling, adaptive average pooling, and linear head; AdamW
+004f11e	c094609ecd5b6d2cb5a897f1b3e4bf2434546ca99e1d0a6cf4b35939825b4f26	0.988600	0.061667	keep	two-stage CNN with 32/64 conv blocks, max pooling, and 128-unit MLP head; AdamW
+66e3b72	8c6b3c237f6e84e5a8c53b9cfced86928a618289b535bf2e4388b36eeb814a90	0.976800	0.075692	discard	compact residual CNN with 16/32 channels, residual blocks, and global average pooling
+b077ce2	4e30fae1b09cc564428df27079aedf70767da2a3ef0c133cee12a90f02fac8df	0.989000	0.054610	discard	two-stage CNN with batch normalization in conv blocks and hidden classifier layer
+7470c71	d1233e744ff81a7be835af588b535c0fa484a676808e11a5d23ca35bd5bd32a2	0.978600	0.073332	discard	widened CNN feature extractor with adaptive global average pooling classifier head
+0364264	49edbf115127ed3d803b70e15c3cb1e1a7855ec9f772f5d7c3de47a89f4d0412	0.990000	0.049932	keep	three-stage CNN with batch norm, ReLU, max-pooling, and linear head
+8874629	61875af9b90d198439d9b040216b2ba30a99275746ba0951adb1e51bb05b303d	0.991600	0.033548	discard	three-stage CNN with compact double-conv blocks before each pooling stage
+e2c4957	13e232b4d48e39a2b9ac04c2290f7f9e8eb424b962aa67a26776945a71c5b2ec	0.989400	0.043124	discard	compact residual three-stage CNN with 1x1 shortcut projections and 32/64/96 channels
+ef4d0d3	0f613eccdedfa5308cc07e5cf59b415075c1f5769aab3b7202405789edde43d6	0.992200	0.078590	keep	current winner architecture with label smoothing and warmup-plus-cosine LR schedule
+43b5b7e	28c1976c0afd15a6f5c7770253d218a6cb90dbc0920d78c573176a3ed00003d7	0.994000	0.069453	keep	double-conv blocks before each pooling stage plus label smoothing and warmup-cosine schedule
+194742c	00927449e32341952144f747b92520059ab8c274f7119cf4f3eec3b4cfd38f09	0.991600	0.081249	discard	higher batch size with shortened warmup/cosine schedule on current architecture
+6755689	8d70e8181dee986ceb89a0d6b786fdd8e6c7e3eafd021a715eae14d79863ba67	0.991800	0.077683	discard	hybrid CNN with extra local depth in early and mid stages under current training policy
+c0e1fbd	20707fd074fb62b88d1d76cb939178ecf03bf9af39c9e15aff2febc34a9135ee	0.992400	0.068909	discard	widened late block to 112 channels and classifier head to 160 units on double-conv winner
+d29595e	ad019f2e42caea09c9aed6fee18805b3d62a5db905f511798acc8f280f6622b2	0.993600	0.065834	discard	double-conv backbone with learned stride-2 convolution downsampling instead of max pooling
+d04b837	ea3f0a559fe9a1abc2d42e2a47475a2c392de6d7b9936422e758993720875b6b	0.994200	0.044215	keep	double-conv winner with longer warmup/cosine schedule and reduced label smoothing
+1d65c74	e18b767bea3108eaf705efbd34296a90ad8dfec53d014edcec09cbf7e8370ff9	0.995000	0.045956	keep	double-conv winner with SiLU activations and unchanged training policy
+77f93b2	fad3cf7164b23b77d3a94aaa0774d2ece90743fbc1beb683d80e034d752e78e4	0.993400	0.043700	discard	schedule-tuned double-conv winner with higher LR floor and longer decay
+f49d6ee	dbb69f958eff8901c43fa9d4553151d600c57c348f15f9ddfda3b7e8d6fb426e	0.991200	0.049382	discard	double-conv backbone with global average pooling, smaller 64-unit head, and light dropout
+a87d799	513376c0016e5100cedbcad8aa2219f61972c0ee0a2bf98493a16d7322f2dc3b	0.995000	0.045997	discard	SiLU double-conv winner with widened final stage to 112 channels and 160-unit head
+1b49252	ce55c43d573dd4b39b2ac046671009c5bcef70fca1c6557fdbd2a9a2068158c2	0.995400	0.033481	keep	SiLU double-conv winner with label smoothing 0.02 and weight decay 2e-4
+79d87e5	21b0ae981d8c83556e6f5cf3de714c53456ccf19b3b9fd4f8420f1fd4176f692	0.994400	0.046584	discard	SiLU double-conv backbone with lightweight residual shortcuts
+8de7143	6c8c7c6f3c6fdc806ab913e5de7816fcb338b79df5801321f23ef52cfeb6ab73	0.994600	0.035746	discard	SiLU winner with AdamW learning rate increased from 1e-3 to 1.2e-3
+095fd01	81c7363124ca7ac3eda795e038140cc839d3482bee7dd15aac44e15eb855f2c9	0.993600	0.036068	discard	SiLU winner with batch size 32 and tuned small-batch AdamW schedule
+74179f4	b620d83396b438c41993c1d4523eff74302ec1569eb7578c72f623c69c143339	0.993800	0.041183	discard	SiLU winner with batch size 64 and stretched warmup-cosine schedule
+244ca67	d9f20edf8c910e9698cb7d5848b12f4747f674fed70fd24bfb77c9c3f9fac01d	0.994000	0.037314	discard	SiLU winner with final stage widened from 96 to 128 channels
+e76d8f9	fdbe9eb9e71cf1a3bd85ff9b66b7230d0b614c180cf5883d0269596c599516e0	0.993400	0.038232	discard	SiLU winner with 5x5 first-stage convolution for larger early receptive field
+e5f408d	3491e51a493d010dfa9e0997865508b64fa6b83be07d271e7b34da22c7fa8c3c	0.993200	0.038734	discard	SiLU winner with average pooling replacing max pooling in each block
+88b2e15	16b34d3a753000d5ebb4d538cb2380e1126e3a921f2140f8409ac909ebf16d88	0.995600	0.044165	keep	SiLU winner with weight decay 3e-4 and label smoothing 0.03
+1813131	ba9f22db664cdc9d56dda42f81ab42646d4f0fc8dcf10441de5eb8018e7c0341	0.995000	0.027882	discard	SiLU winner with label smoothing reduced from 0.02 to 0.01
+81b14d2	b687e381baa846b14bee988c693182d807d265caa9c77d320170088597d0930f	0.995000	0.037635	discard	SiLU winner with lower LR floor and longer cosine decay span
+fb88ae8	6beb88bfd2cf13bfa5f24467c8a84c0f2d6eeb6fac65912071a8b8bcf40dcb0b	0.995000	0.036052	discard	SiLU winner with weight decay 3e-4 and label smoothing reduced to 0.02
+89090bb	73843f3d29343f27c8cf21bc81dcf0d0c4966981dd76ffe7641e22802edd5d55	0.995000	0.042164	discard	SiLU winner with intermediate regularization: weight decay 2.5e-4 and label smoothing 0.025
+fe4fd49	1fa748ca2c1c51aaea7e2d9133188ff29944b0e4b88210f7af792a49bb674386	0.994000	0.056221	discard	SiLU winner with weight decay 4e-4 and label smoothing 0.04
+35cd93f	386d2af90490e92ceaf4c01da02bb8364e96f87e9241135c8e26457dde52296d	0.994000	0.047470	discard	Current winner with Mish activations instead of SiLU
+3767303	b9006e64cc2422b7c52bf6b5207fe9a7d0861d5faaf0d7bebd121496a808ee7c	0.994000	0.045467	discard	Current winner with GELU activations instead of SiLU
+15ce11f	73fd7bd424b77431238a44e788a9274d7131e1d7679382e5d8755860dc545325	0.993400	0.051057	discard	Current winner with GroupNorm replacing BatchNorm
+0df05c0	87b6e4ba4559ea69e373c6e2644ff7ad332448189dd92ace8b2a1d1674976c01	0.994800	0.049967	discard	Current winner with AdamW learning rate increased from 1e-3 to 1.2e-3
+8156625	d6bdd4cd19ae848280665def2cc29a51d3c253ea36240fd2aad6e10967dd016d	0.992200	0.048887	discard	Current winner with batch size 96 and proportionally stretched schedule
+c6e8b49	84e56ed98c854920ef510750748a58be054e36c6570b78f21e8fa0c312a9be89	0.993200	0.051319	discard	Current winner with batch size 64 and retuned small-batch schedule
+8a1b129	64906ff9bc3c340f10d553c77e5527048cf1754d9f45a1c0da213cad59792ed1	0.994200	0.044370	discard	Current winner with classifier head widened from 128 to 192 units
+602214f	9466e9d179f68f3b6984280d344a427074ce390084898dfff57a406857740c5c	0.994600	0.044790	discard	Current winner with BatchNorm momentum reduced from 0.1 to 0.05
+3a53896	c6e243cf5775df8ce4b356b604d73afa9849265a9f714c171d276ac9eccc20ac	0.994000	0.047649	discard	Current winner with dropout 0.1 inserted in the classifier head
+5b718f1	7ba7d6f14a1f7d649671cbcae8b355816847f24ce152664b89a9a25964d814b6	0.995400	0.044657	discard	Current winner with EMA evaluation of model weights
+0e46d6a	bc3be8b3b11ec887e8736584a7a3cdec61d8636f22fbc18dc2d540788c0d664f	0.995600	0.046094	discard	Current winner with EMA shadow model and final buffer copy for evaluation
+b915ae4	48303ec3f45ade65a5315034dc880b576fae14a81a7698e1868ac29eee5f11b6	0.995600	0.047019	discard	Current winner with faster EMA decay 0.99 for evaluation model
