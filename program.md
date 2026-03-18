@@ -37,6 +37,7 @@ uv run modal run modal_run.py > run.log 2>&1
 
 - Modify `train.py` - this is the only file you edit. Everything inside it is fair game: model architecture, optimizer, hyperparameters, training loop, batch size, regularization, normalization, pooling, scheduler, model size, and so on.
 - The search should stay constrained to **CNN-like models** and closely related training decisions. Convolutions, depth/width changes, residual connections, pooling choices, activations, normalization, classifier heads, and similar ideas are all in scope.
+- Execute the loop yourself. Edit `train.py`, run the experiment, inspect the result, and decide the next change directly.
 
 **What you CANNOT do:**
 
@@ -45,6 +46,7 @@ uv run modal run modal_run.py > run.log 2>&1
 - Install new packages or add dependencies. You can only use what is already in `pyproject.toml`.
 - Modify the validation split or evaluation harness.
 - Optimize against the MNIST test set during the loop. The held-out test set is only for the final chosen model via `uv run modal run modal_run.py --final-test > run.log 2>&1`.
+- Write any orchestration, controller, scaffold, search script, or other program that automates the research loop for you. Do not generate code that generates `train.py` candidates. The loop must live in the agent's own actions, not in a helper program.
 
 **The goal is simple: get the highest `val_accuracy`.** If two runs tie at the printed precision, the lower `val_loss` wins. If they are still effectively tied, prefer the simpler implementation. Since the time budget is fixed, you do not need to worry much about training time beyond making sure the code actually runs and finishes within budget.
 
@@ -115,6 +117,7 @@ The experiment runs on a dedicated branch such as `codex/autoresearch/mar18`. LO
 9. If the run is worse, or tied without being simpler, reset back to where you started.
 
 The idea is that you are a completely autonomous researcher trying things out. If they work, keep them. If they do not, discard them. Advance the branch only when the best known result improves.
+Do this manually as the agent. Do not create a separate loop runner or delegate the decision-making/editing loop to generated code.
 
 **Timeout**: each experiment should take about 60 seconds of training time plus a small amount of startup and evaluation overhead. If a run gets stuck far beyond that, kill it and treat it as a failure.
 
