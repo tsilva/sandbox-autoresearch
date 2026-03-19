@@ -10,10 +10,14 @@ from subprocess import run
 from experiment_tools import (
     ExperimentToolError,
     append_result,
+    create_worktree,
+    parse_run_output,
     ensure_results_tsv,
     export_commit_tree,
     preflight_candidate,
+    remove_worktree,
     resolve_commit,
+    select_best_candidate,
     train_py_sha256,
 )
 
@@ -124,6 +128,71 @@ class ExperimentToolsTest(unittest.TestCase):
                 description="duplicate",
                 results_path=results_path,
             )
+
+    def test_parse_run_output_extracts_metrics(self) -> None:
+        result = parse_run_output(
+            "\n".join(
+                [
+                    "---",
+                    "model_name:       cnn",
+                    "device:           cuda",
+                    "val_accuracy:     0.991200",
+                    "val_loss:         0.031400",
+                    "training_seconds: 60.0",
+                    "total_seconds:    61.2",
+                    "num_steps:        900",
+                    "num_params_k:     42.5",
+                ]
+            )
+        )
+
+        self.assertTrue(result.success)
+        self.assertIsNotNone(result.metrics)
+        assert result.metrics is not None
+        self.assertEqual(result.metrics.model_name, "cnn")
+        self.assertAlmostEqual(result.metrics.val_accuracy, 0.9912)
+        self.assertAlmostEqual(result.metrics.num_params_k, 42.5)
+
+    def test_parse_run_output_marks_missing_metrics_as_crash(self) -> None:
+        result = parse_run_output("resolved_commit: deadbeef\n", "Traceback: boom\n", returncode=0)
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.crash_reason, "Traceback: boom")
+
+    def test_select_best_candidate_uses_accuracy_then_loss_then_simplicity(self) -> None:
+        best = select_best_candidate(
+            [
+                {
+                    "train_py_sha256": "b",
+                    "val_accuracy": 0.99,
+                    "val_loss": 0.04,
+                    "num_params_k": 60.0,
+                    "train_py_bytes": 300,
+                },
+                {
+                    "train_py_sha256": "a",
+                    "val_accuracy": 0.99,
+                    "val_loss": 0.04,
+                    "num_params_k": 40.0,
+                    "train_py_bytes": 500,
+                },
+            ]
+        )
+
+        self.assertEqual(best["train_py_sha256"], "a")
+
+    def test_create_and_remove_worktree_round_trip(self) -> None:
+        commit = self._commit_train("print('baseline')\n", "baseline")
+        worktree_path = self.repo_dir / "wt"
+
+        create_worktree(self.repo_dir, worktree_path, commit)
+
+        self.assertTrue((worktree_path / "train.py").exists())
+
+        removed = remove_worktree(self.repo_dir, worktree_path)
+
+        self.assertTrue(removed)
+        self.assertFalse(worktree_path.exists())
 
 
 if __name__ == "__main__":

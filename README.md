@@ -5,9 +5,10 @@ Minimal MNIST adaptation of [karpathy/autoresearch](https://github.com/karpathy/
 - `prepare.py` is the fixed harness for data, splits, and evaluation.
 - `train.py` is the only file the autonomous researcher edits.
 - `modal_run.py` runs each experiment remotely on Modal while keeping the agent and git state local.
-- `experiment_tools.py` manages `train.py` checksums, `results.tsv`, and duplicate preflight checks.
+- `experiment_tools.py` manages checksums, worktrees, run parsing, ranking, and `results.tsv`.
+- `orchestrate.py` is the deterministic experiment runtime around agent-driven `train.py` edits.
 - `run_exact_commit.py` exports one committed snapshot with `git archive` and runs that exact tree on Modal.
-- `program.md` is the human-authored prompt that defines the experiment loop.
+- `program.md` documents the policy boundary: Codex chooses experiments, the runtime handles mechanics.
 
 This repo targets Apple Silicon first via `mps`, with `cpu` fallback. Each experiment is capped at a fixed 60-second wall-clock training budget and ranked by validation accuracy, then validation loss, then simplicity.
 
@@ -34,8 +35,11 @@ The setup mirrors the original autoresearch pattern, but now the coordinator use
 2. Ensure Modal is authenticated by running `uv run modal setup`.
 3. Create a fresh branch named `codex/autoresearch/<tag>`.
 4. Initialize or migrate `results.tsv` with `uv run python experiment_tools.py ensure-results`.
-5. Run the baseline from a committed snapshot with `uv run python run_exact_commit.py --commit HEAD > run.log 2>&1`.
-6. Let the coordinator iterate only on `train.py`, keeping better runs and discarding worse ones.
+5. Create an ideas file with one experiment idea per line.
+6. Start a round with `uv run python orchestrate.py start-round --ideas-file ideas.txt`.
+7. Let Codex dispatch workers using the generated task and prompt artifacts.
+8. Approve unique committed candidates with `uv run python orchestrate.py approve-candidates --round-id <id>`.
+9. Execute approved candidates and record results with `uv run python orchestrate.py finalize-round --round-id <id>`.
 
 The intended experiment log is an untracked `results.tsv` with this schema:
 
@@ -69,7 +73,7 @@ The MNIST cache is stored remotely in a named Modal Volume so repeated runs do n
 
 ## Coordination helpers
 
-`experiment_tools.py` is the coordinator-side utility surface:
+`experiment_tools.py` is the deterministic helper surface:
 
 ```bash
 uv run python experiment_tools.py ensure-results
@@ -84,6 +88,17 @@ uv run python experiment_tools.py append-result \
 ```
 
 `preflight` is the duplicate gate. If two commits have the same `train.py` SHA-256, only one of them should be allowed to run.
+
+`orchestrate.py` owns round state and worktree lifecycle:
+
+```bash
+uv run python orchestrate.py start-round --ideas-file ideas.txt
+uv run python orchestrate.py approve-candidates --round-id <id>
+uv run python orchestrate.py finalize-round --round-id <id>
+uv run python orchestrate.py resume --round-id <id>
+```
+
+Each round writes a JSON artifact under `artifacts/<round-id>/round.json` plus task, prompt, preflight, and run payload files. Codex remains responsible for proposing ideas and interpreting the resulting state; the runtime only manages the repeated mechanical steps.
 
 ## Device support
 

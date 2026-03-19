@@ -1,6 +1,6 @@
 # mnist-autoresearch
 
-This is an experiment to have the LLM do its own research on MNIST, constrained to CNN-like image models. The main Codex agent is the coordinator. It owns the current best commit, creates worker worktrees, assigns ideas, gates candidates by `train.py` checksum, and records results.
+This is an experiment to have the LLM do its own research on MNIST, constrained to CNN-like image models. Codex remains the research policy: it proposes hypotheses, interprets outcomes, and chooses what to try next. The deterministic runtime in `orchestrate.py` owns the repeated mechanics: worktree creation, checksum gating, exact-commit execution, result logging, and round persistence.
 
 ## Setup
 
@@ -23,23 +23,25 @@ To set up a new experiment, work with the user to:
 commit	train_py_sha256	val_accuracy	val_loss	status	description
 ```
 
-6. **Confirm and go**: confirm setup looks good.
+6. **Create ideas for the next round**: write one idea per line in a text file.
+7. **Start the round**: run `uv run python orchestrate.py start-round --ideas-file ideas.txt`.
 
 Once you get confirmation, kick off the experimentation.
 
 ## Coordinator loop
 
-Each experiment runs on a single device. The training script runs for a **fixed time budget of 60 seconds** of wall clock training time. The coordinator does not run dirty worktrees on Modal. Every run goes through:
+Each experiment runs on a single device. The training script runs for a **fixed time budget of 60 seconds** of wall clock training time. The runtime never runs dirty worktrees on Modal. Every run goes through:
 
 ```bash
 uv run python run_exact_commit.py --commit HEAD > run.log 2>&1
 ```
 
-The coordinator owns all of this:
+The runtime owns all of this:
 
 - Keep the main workspace on `codex/autoresearch/<tag>`.
 - Treat `HEAD` as the current best commit `B`.
 - Read prior checksums from `results.tsv`.
+- Persist round state under `artifacts/<round-id>/round.json`.
 - Generate distinct worker tasks, defaulting to 3 per round.
 - Create one worktree per worker from `B`.
 - Spawn subagents and give each one:
@@ -47,12 +49,12 @@ The coordinator owns all of this:
   - the base commit `B`
   - one explicit experiment idea
   - the worker contract below
-- Collect preflight payloads, approve only unique checksums, then collect final run payloads.
+- Collect preflight payloads, approve only unique checksums, then execute approved candidates.
 - Append rows to `results.tsv`.
 - Select the winner and fast-forward the branch if it improved on `B`.
 - Remove all worker worktrees before the next round.
 
-The search must stay constrained to **CNN-like models** and closely related training decisions. Convolutions, depth/width changes, residual connections, pooling choices, activations, normalization, classifier heads, and similar ideas are all in scope. Only `train.py` is the research surface.
+The search must stay constrained to **CNN-like models** and closely related training decisions. Convolutions, depth/width changes, residual connections, pooling choices, activations, normalization, classifier heads, and similar ideas are all in scope. Only `train.py` is the research surface, and it remains fully editable by the agent.
 
 ## Worker contract
 
