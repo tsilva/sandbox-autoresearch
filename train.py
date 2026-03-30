@@ -18,6 +18,7 @@ from prepare import (
 TRAIN_BATCH_SIZE = 1024
 LEARNING_RATE = 1e-3
 WEIGHT_DECAY = 1e-4
+LABEL_SMOOTHING = 0.02
 
 EARLY_STOPPING_PATIENCE = 12
 EARLY_STOPPING_MIN_DELTA = 1e-4
@@ -28,19 +29,24 @@ class ConvNet(nn.Module):
         super().__init__()
         self.features = nn.Sequential(
             nn.Conv2d(1, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
             nn.GELU(),
             nn.Conv2d(32, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
             nn.GELU(),
             nn.MaxPool2d(kernel_size=2),
             nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
             nn.GELU(),
             nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
             nn.GELU(),
             nn.MaxPool2d(kernel_size=2),
         )
         self.classifier = nn.Sequential(
             nn.Flatten(),
             nn.Linear(64 * 7 * 7, 256),
+            nn.BatchNorm1d(256),
             nn.GELU(),
             nn.Dropout(p=0.15),
             nn.Linear(256, 10),
@@ -96,7 +102,12 @@ def main() -> None:
             batch_labels = train_labels[batch_indices].to(device)
 
             optimizer.zero_grad(set_to_none=True)
-            loss = F.cross_entropy(model(batch_images), batch_labels)
+            logits = model(batch_images)
+            loss = F.cross_entropy(
+                logits,
+                batch_labels,
+                label_smoothing=LABEL_SMOOTHING,
+            )
             loss.backward()
             optimizer.step()
 
