@@ -1,9 +1,3 @@
-"""
-Train a simple linear classifier on MNIST.
-
-Usage: python train.py
-"""
-
 from __future__ import annotations
 
 import time
@@ -16,22 +10,17 @@ from prepare import TIME_BUDGET, evaluate_accuracy, load_mnist
 
 TRAIN_BATCH_SIZE = 4096
 LEARNING_RATE = 3e-3
-WEIGHT_DECAY = 1e-4
 
 
 def get_device() -> torch.device:
-    if torch.cuda.is_available():
-        return torch.device("cuda")
-    if torch.backends.mps.is_available():
-        return torch.device("mps")
+    if torch.cuda.is_available(): return torch.device("cuda")
+    if torch.backends.mps.is_available(): return torch.device("mps")
     return torch.device("cpu")
 
 
 def synchronize_device(device: torch.device) -> None:
-    if device.type == "cuda":
-        torch.cuda.synchronize(device)
-    elif device.type == "mps":
-        torch.mps.synchronize()
+    if device.type == "cuda": torch.cuda.synchronize(device)
+    elif device.type == "mps": torch.mps.synchronize()
 
 
 def main() -> None:
@@ -46,7 +35,7 @@ def main() -> None:
     train_images, train_labels, val_images, val_labels = load_mnist()
 
     model = nn.Linear(28 * 28, 10).to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
     if device.type == "cuda":
         torch.cuda.reset_peak_memory_stats(device)
