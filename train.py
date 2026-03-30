@@ -20,6 +20,7 @@ LEARNING_RATE = 1e-3
 WEIGHT_DECAY = 1e-4
 LABEL_SMOOTHING = 0.02
 AUGMENT_MAX_SHIFT = 2
+AUGMENT_MAX_ROTATION_DEG = 12.0
 
 EARLY_STOPPING_PATIENCE = 12
 EARLY_STOPPING_MIN_DELTA = 1e-4
@@ -61,8 +62,17 @@ class ConvNet(nn.Module):
 def random_translate(images: torch.Tensor) -> torch.Tensor:
     max_offset = AUGMENT_MAX_SHIFT / 14.0
     theta = torch.zeros(images.size(0), 2, 3, device=images.device, dtype=images.dtype)
-    theta[:, 0, 0] = 1.0
-    theta[:, 1, 1] = 1.0
+    angles = torch.empty(images.size(0), device=images.device, dtype=images.dtype)
+    angles.uniform_(
+        -AUGMENT_MAX_ROTATION_DEG * torch.pi / 180.0,
+        AUGMENT_MAX_ROTATION_DEG * torch.pi / 180.0,
+    )
+    cos_angles = angles.cos()
+    sin_angles = angles.sin()
+    theta[:, 0, 0] = cos_angles
+    theta[:, 0, 1] = -sin_angles
+    theta[:, 1, 0] = sin_angles
+    theta[:, 1, 1] = cos_angles
     theta[:, 0, 2].uniform_(-max_offset, max_offset)
     theta[:, 1, 2].uniform_(-max_offset, max_offset)
     image_grid = images.view(-1, 1, 28, 28)
