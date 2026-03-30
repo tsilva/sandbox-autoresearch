@@ -19,6 +19,7 @@ TRAIN_BATCH_SIZE = 1024
 LEARNING_RATE = 1e-3
 WEIGHT_DECAY = 1e-4
 LABEL_SMOOTHING = 0.02
+AUGMENT_MAX_SHIFT = 2
 
 EARLY_STOPPING_PATIENCE = 12
 EARLY_STOPPING_MIN_DELTA = 1e-4
@@ -55,6 +56,25 @@ class ConvNet(nn.Module):
     def forward(self, images: torch.Tensor) -> torch.Tensor:
         images = images.view(-1, 1, 28, 28)
         return self.classifier(self.features(images))
+
+
+def random_translate(images: torch.Tensor) -> torch.Tensor:
+    max_offset = AUGMENT_MAX_SHIFT / 14.0
+    theta = torch.zeros(images.size(0), 2, 3, device=images.device, dtype=images.dtype)
+    theta[:, 0, 0] = 1.0
+    theta[:, 1, 1] = 1.0
+    theta[:, 0, 2].uniform_(-max_offset, max_offset)
+    theta[:, 1, 2].uniform_(-max_offset, max_offset)
+    image_grid = images.view(-1, 1, 28, 28)
+    grid = F.affine_grid(theta, image_grid.size(), align_corners=False)
+    translated = F.grid_sample(
+        image_grid,
+        grid,
+        mode="bilinear",
+        padding_mode="zeros",
+        align_corners=False,
+    )
+    return translated.view_as(images)
 
 
 def main() -> None:
@@ -100,6 +120,7 @@ def main() -> None:
             batch_indices = permutation[start:start + TRAIN_BATCH_SIZE]
             batch_images = train_images[batch_indices].to(device)
             batch_labels = train_labels[batch_indices].to(device)
+            batch_images = random_translate(batch_images)
 
             optimizer.zero_grad(set_to_none=True)
             logits = model(batch_images)
