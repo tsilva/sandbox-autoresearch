@@ -27,6 +27,13 @@ def get_device() -> torch.device:
     return torch.device("cpu")
 
 
+def synchronize_device(device: torch.device) -> None:
+    if device.type == "cuda":
+        torch.cuda.synchronize(device)
+    elif device.type == "mps":
+        torch.mps.synchronize()
+
+
 def main() -> None:
     torch.manual_seed(0)
     torch.set_float32_matmul_precision("high")
@@ -34,7 +41,7 @@ def main() -> None:
         torch.backends.cuda.matmul.allow_tf32 = True
         torch.backends.cudnn.allow_tf32 = True
 
-    script_start = time.time()
+    script_start = time.perf_counter()
     device = get_device()
     train_images, train_labels, val_images, val_labels = load_mnist()
 
@@ -44,13 +51,13 @@ def main() -> None:
     if device.type == "cuda":
         torch.cuda.reset_peak_memory_stats(device)
 
-    train_start = time.time()
     best_val_acc = 0.0
     last_val_acc = 0.0
     last_loss = 0.0
     num_steps = 0
     epochs = 0
     examples_seen = 0
+    training_seconds = 0.0
 
     while True:
         epochs += 1
@@ -58,17 +65,21 @@ def main() -> None:
 
         model.train()
         for start in range(0, train_labels.size(0), TRAIN_BATCH_SIZE):
-            if num_steps > 0 and time.time() - train_start >= TIME_BUDGET:
+            if num_steps > 0 and training_seconds >= TIME_BUDGET:
                 break
 
             batch_indices = permutation[start:start + TRAIN_BATCH_SIZE]
             batch_images = train_images[batch_indices].to(device)
             batch_labels = train_labels[batch_indices].to(device)
 
+            synchronize_device(device)
+            step_start = time.perf_counter()
             optimizer.zero_grad(set_to_none=True)
             loss = F.cross_entropy(model(batch_images), batch_labels)
             loss.backward()
             optimizer.step()
+            synchronize_device(device)
+            training_seconds += time.perf_counter() - step_start
 
             last_loss = loss.item()
             num_steps += 1
@@ -76,20 +87,21 @@ def main() -> None:
 
         last_val_acc = evaluate_accuracy(model, val_images, val_labels, device)
         best_val_acc = max(best_val_acc, last_val_acc)
-        elapsed = time.time() - train_start
         print(
             f"epoch {epochs:03d} step {num_steps:05d} "
             f"loss {last_loss:.4f} val_acc {last_val_acc:.4f} "
-            f"best {best_val_acc:.4f} time {elapsed:.1f}s"
+            f"best {best_val_acc:.4f} time {training_seconds:.1f}s"
         )
 
-        if time.time() - train_start >= TIME_BUDGET:
+        if training_seconds >= TIME_BUDGET:
             break
 
     # Final eval after training completes, mirroring train_old.py.
     model.eval()
     final_val_acc = evaluate_accuracy(model, val_images, val_labels, device)
     best_val_acc = max(best_val_acc, final_val_acc)
+    synchronize_device(device)
+    total_seconds = time.perf_counter() - script_start
 
     peak_vram_mb = (
         torch.cuda.max_memory_allocated(device) / (1024 ** 2)
@@ -102,8 +114,8 @@ def main() -> None:
     print(f"val_acc:          {final_val_acc:.6f}")
     print(f"best_val_acc:     {best_val_acc:.6f}")
     print(f"last_val_acc:     {last_val_acc:.6f}")
-    print(f"training_seconds: {time.time() - train_start:.1f}")
-    print(f"total_seconds:    {time.time() - script_start:.1f}")
+    print(f"training_seconds: {training_seconds:.1f}")
+    print(f"total_seconds:    {total_seconds:.1f}")
     print(f"peak_vram_mb:     {peak_vram_mb:.1f}")
     print(f"examples_seen_k:  {examples_seen / 1e3:.1f}")
     print(f"num_steps:        {num_steps}")
