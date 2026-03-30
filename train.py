@@ -71,17 +71,17 @@ def main() -> None:
             f"loss {last_loss:.4f} val_acc {last_val_acc:.4f} "
             f"best {best_val_acc:.4f} time {training_seconds:.1f}s"
         )
-
         if training_seconds >= TIME_BUDGET:
             break
 
     # Final eval after training completes
     final_val_acc = evaluate_accuracy(model, val_images, val_labels, device)
+    last_val_acc = final_val_acc
     best_val_acc = max(best_val_acc, final_val_acc)
     synchronize_device(device)
     total_seconds = time.perf_counter() - script_start
 
-    peak_vram_mb = get_peak_vram_mb()
+    peak_vram_mb = get_peak_vram_mb(device)
     num_params = sum(parameter.numel() for parameter in model.parameters())
 
     print("---")
