@@ -86,6 +86,11 @@ def main() -> None:
         if time.time() - train_start >= TIME_BUDGET:
             break
 
+    # Final eval after training completes, mirroring train_old.py.
+    model.eval()
+    final_val_acc = evaluate_accuracy(model, val_images, val_labels, device)
+    best_val_acc = max(best_val_acc, final_val_acc)
+
     peak_vram_mb = (
         torch.cuda.max_memory_allocated(device) / (1024 ** 2)
         if device.type == "cuda"
@@ -94,7 +99,8 @@ def main() -> None:
     num_params = sum(parameter.numel() for parameter in model.parameters())
 
     print("---")
-    print(f"val_acc:          {best_val_acc:.6f}")
+    print(f"val_acc:          {final_val_acc:.6f}")
+    print(f"best_val_acc:     {best_val_acc:.6f}")
     print(f"last_val_acc:     {last_val_acc:.6f}")
     print(f"training_seconds: {time.time() - train_start:.1f}")
     print(f"total_seconds:    {time.time() - script_start:.1f}")
