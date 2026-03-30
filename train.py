@@ -52,7 +52,7 @@ class ConvNet(nn.Module):
             nn.Linear(64 * 7 * 7, 256),
             nn.BatchNorm1d(256),
             nn.GELU(),
-            nn.Dropout(p=0.15),
+            nn.Dropout(p=0.20),
             nn.Linear(256, 10),
         )
 
