@@ -15,11 +15,40 @@ from prepare import (
 )
 
 
-TRAIN_BATCH_SIZE = 4096
-LEARNING_RATE = 3e-3
+TRAIN_BATCH_SIZE = 1024
+LEARNING_RATE = 1e-3
+WEIGHT_DECAY = 1e-4
 
-EARLY_STOPPING_PATIENCE = 5
+EARLY_STOPPING_PATIENCE = 12
 EARLY_STOPPING_MIN_DELTA = 1e-4
+
+
+class ConvNet(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(1, 32, kernel_size=3, padding=1),
+            nn.GELU(),
+            nn.Conv2d(32, 32, kernel_size=3, padding=1),
+            nn.GELU(),
+            nn.MaxPool2d(kernel_size=2),
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.GELU(),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.GELU(),
+            nn.MaxPool2d(kernel_size=2),
+        )
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(64 * 7 * 7, 256),
+            nn.GELU(),
+            nn.Dropout(p=0.15),
+            nn.Linear(256, 10),
+        )
+
+    def forward(self, images: torch.Tensor) -> torch.Tensor:
+        images = images.view(-1, 1, 28, 28)
+        return self.classifier(self.features(images))
 
 
 def main() -> None:
@@ -32,8 +61,12 @@ def main() -> None:
     device = get_device()
     train_images, train_labels, val_images, val_labels = load_mnist()
 
-    model = nn.Linear(28 * 28, 10).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    model = ConvNet().to(device)
+    optimizer = torch.optim.AdamW(
+        model.parameters(),
+        lr=LEARNING_RATE,
+        weight_decay=WEIGHT_DECAY,
+    )
 
     if device.type == "cuda":
         torch.cuda.reset_peak_memory_stats(device)
