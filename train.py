@@ -6,21 +6,11 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from prepare import TIME_BUDGET, evaluate_accuracy, load_mnist
+from prepare import TIME_BUDGET, evaluate_accuracy, load_mnist, get_device, synchronize_device, get_peak_vram_mb
+
 
 TRAIN_BATCH_SIZE = 4096
 LEARNING_RATE = 3e-3
-
-
-def get_device() -> torch.device:
-    if torch.cuda.is_available(): return torch.device("cuda")
-    if torch.backends.mps.is_available(): return torch.device("mps")
-    return torch.device("cpu")
-
-
-def synchronize_device(device: torch.device) -> None:
-    if device.type == "cuda": torch.cuda.synchronize(device)
-    elif device.type == "mps": torch.mps.synchronize()
 
 
 def main() -> None:
@@ -85,18 +75,13 @@ def main() -> None:
         if training_seconds >= TIME_BUDGET:
             break
 
-    # Final eval after training completes, mirroring train_old.py.
-    model.eval()
+    # Final eval after training completes
     final_val_acc = evaluate_accuracy(model, val_images, val_labels, device)
     best_val_acc = max(best_val_acc, final_val_acc)
     synchronize_device(device)
     total_seconds = time.perf_counter() - script_start
 
-    peak_vram_mb = (
-        torch.cuda.max_memory_allocated(device) / (1024 ** 2)
-        if device.type == "cuda"
-        else 0.0
-    )
+    peak_vram_mb = get_peak_vram_mb()
     num_params = sum(parameter.numel() for parameter in model.parameters())
 
     print("---")

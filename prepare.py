@@ -105,6 +105,25 @@ def load_mnist() -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor
     return train_images, train_labels, val_images, val_labels
 
 
+def get_device() -> torch.device:
+    if torch.cuda.is_available(): return torch.device("cuda")
+    if torch.backends.mps.is_available(): return torch.device("mps")
+    return torch.device("cpu")
+
+
+def synchronize_device(device: torch.device) -> None:
+    if device.type == "cuda": torch.cuda.synchronize(device)
+    elif device.type == "mps": torch.mps.synchronize()
+
+
+def get_peak_vram_mb(device):
+    return (
+        torch.cuda.max_memory_allocated(device) / (1024 ** 2)
+        if device.type == "cuda"
+        else 0.0
+    )
+
+
 @torch.no_grad()
 def evaluate_accuracy(
     model: torch.nn.Module,
