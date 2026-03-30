@@ -22,6 +22,7 @@ LABEL_SMOOTHING = 0.02
 AUGMENT_MAX_SHIFT = 2
 AUGMENT_MAX_ROTATION_DEG = 12.0
 MIN_LEARNING_RATE = 1e-4
+SCHEDULER_T_MAX = 24
 
 EARLY_STOPPING_PATIENCE = 12
 EARLY_STOPPING_MIN_DELTA = 1e-4
@@ -106,7 +107,7 @@ def main() -> None:
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer,
-        T_max=32,
+        T_max=SCHEDULER_T_MAX,
         eta_min=MIN_LEARNING_RATE,
     )
 
