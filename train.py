@@ -21,6 +21,7 @@ WEIGHT_DECAY = 1e-4
 LABEL_SMOOTHING = 0.02
 AUGMENT_MAX_SHIFT = 2
 AUGMENT_MAX_ROTATION_DEG = 12.0
+MIN_LEARNING_RATE = 1e-4
 
 EARLY_STOPPING_PATIENCE = 12
 EARLY_STOPPING_MIN_DELTA = 1e-4
@@ -103,6 +104,11 @@ def main() -> None:
         lr=LEARNING_RATE,
         weight_decay=WEIGHT_DECAY,
     )
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer,
+        T_max=32,
+        eta_min=MIN_LEARNING_RATE,
+    )
 
     if device.type == "cuda":
         torch.cuda.reset_peak_memory_stats(device)
@@ -157,6 +163,8 @@ def main() -> None:
             epochs_without_improvement = 0
         else:
             epochs_without_improvement += 1
+
+        scheduler.step()
 
         elapsed_t = time.time() - start_t
         print(
