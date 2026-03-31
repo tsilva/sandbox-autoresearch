@@ -5,11 +5,14 @@ description = "Autonomous pretraining research swarm"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "datasets==4.8.4",
     "kernels>=0.11.7",
+    "lightning==2.6.1",
     "matplotlib>=3.10.8",
     "numpy>=2.2.6",
     "pandas>=2.3.3",
     "pyarrow>=21.0.0",
     "requests>=2.32.0",
     "torch==2.9.1",
+    "wandb==0.25.1",
 ]

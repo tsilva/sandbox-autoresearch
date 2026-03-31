@@ -30,7 +30,7 @@ def main() -> None:
         torch.backends.cudnn.allow_tf32 = True
 
     device = get_device()
-    train_images, train_labels, val_images, val_labels = load_mnist()
+    train_images, train_labels, val_images, val_labels, test_images, test_labels = load_mnist()
 
     model = nn.Linear(28 * 28, 10).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
@@ -104,6 +104,7 @@ def main() -> None:
 
     model.load_state_dict(best_state_dict)
     final_val_acc = evaluate_accuracy(model, val_images, val_labels, device)
+    final_test_acc = evaluate_accuracy(model, test_images, test_labels, device)
     elapsed_t = time.time() - start_t
 
     peak_vram_mb = get_peak_vram_mb(device)
@@ -111,6 +112,7 @@ def main() -> None:
 
     print("---")
     print(f"val_acc:          {final_val_acc:.6f}")
+    print(f"test_acc:         {final_test_acc:.6f}")
     print(f"best_val_acc:     {best_val_acc:.6f}")
     print(f"last_val_acc:     {last_val_acc:.6f}")
     print(f"total_seconds:    {elapsed_t:.1f}")

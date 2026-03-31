@@ -9,12 +9,9 @@ Data is stored in ~/.cache/autoresearch/mnist/.
 
 from __future__ import annotations
 
-import gzip
-import shutil
-import struct
-import urllib.request
 from pathlib import Path
 
+from datasets import Dataset, load_dataset
 import numpy as np
 import torch
 
@@ -30,79 +27,72 @@ EVAL_BATCH_SIZE = 10000
 # ---------------------------------------------------------------------------
 
 CACHE_DIR = Path.home() / ".cache" / "autoresearch" / "mnist"
-FILES = {
-    "train_images": "train-images-idx3-ubyte.gz",
-    "train_labels": "train-labels-idx1-ubyte.gz",
-    "val_images": "t10k-images-idx3-ubyte.gz",
-    "val_labels": "t10k-labels-idx1-ubyte.gz",
+HF_CACHE_DIR = CACHE_DIR / "huggingface"
+DATASET_NAME = "ylecun/mnist"
+VALIDATION_SIZE = 5_000
+SPLIT_SEED = 0
+SPLIT_FILES = {
+    "train": "train.pt",
+    "validation": "validation.pt",
+    "test": "test.pt",
 }
-BASE_URLS = [
-    "https://storage.googleapis.com/cvdf-datasets/mnist/",
-    "https://ossci-datasets.s3.amazonaws.com/mnist/",
-]
-
-
-def download_file(filename: str) -> Path:
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    destination = CACHE_DIR / filename
-    if destination.exists():
-        return destination
-
-    temp_destination = destination.with_suffix(destination.suffix + ".tmp")
-    last_error = None
-    for base_url in BASE_URLS:
-        try:
-            with urllib.request.urlopen(base_url + filename) as response, open(temp_destination, "wb") as handle:
-                shutil.copyfileobj(response, handle)
-            temp_destination.replace(destination)
-            print(f"Downloaded {filename}")
-            return destination
-        except Exception as exc:  # pragma: no cover - network failures are environment-specific
-            last_error = exc
-            if temp_destination.exists():
-                temp_destination.unlink()
-    raise RuntimeError(f"failed to download {filename}") from last_error
 
 
 def prepare_data() -> None:
-    for filename in FILES.values():
-        download_file(filename)
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    dataset = load_dataset(DATASET_NAME, cache_dir=str(HF_CACHE_DIR))
+    train_val_split = dataset["train"].train_test_split(
+        test_size=VALIDATION_SIZE,
+        seed=SPLIT_SEED,
+        stratify_by_column="label",
+    )
+    prepared_splits = {
+        "train": train_val_split["train"],
+        "validation": train_val_split["test"],
+        "test": dataset["test"],
+    }
+
+    for split_name, split in prepared_splits.items():
+        payload = _dataset_split_to_payload(split)
+        torch.save(payload, CACHE_DIR / SPLIT_FILES[split_name])
+        print(f"Prepared {split_name} split with {payload['labels'].numel()} examples")
+
     print(f"MNIST ready at {CACHE_DIR}")
 
 
-def _load_images(path: Path) -> torch.Tensor:
-    with gzip.open(path, "rb") as handle:
-        magic, count, rows, cols = struct.unpack(">IIII", handle.read(16))
-        if magic != 2051:
-            raise ValueError(f"unexpected image magic number in {path}: {magic}")
-        data = np.frombuffer(handle.read(), dtype=np.uint8).astype(np.float32).reshape(count, rows * cols)
-    tensor = torch.from_numpy(data)
-    tensor.div_(255.0)
-    tensor.sub_(0.1307).div_(0.3081)
-    return tensor
+def _dataset_split_to_payload(split: Dataset) -> dict[str, torch.Tensor]:
+    images = np.empty((len(split), 28 * 28), dtype=np.float32)
+    labels = np.empty((len(split),), dtype=np.int64)
+
+    for index, example in enumerate(split):
+        images[index] = np.asarray(example["image"], dtype=np.float32).reshape(-1)
+        labels[index] = example["label"]
+
+    image_tensor = torch.from_numpy(images)
+    image_tensor.div_(255.0)
+    image_tensor.sub_(0.1307).div_(0.3081)
+    label_tensor = torch.from_numpy(labels)
+    return {"images": image_tensor, "labels": label_tensor}
 
 
-def _load_labels(path: Path) -> torch.Tensor:
-    with gzip.open(path, "rb") as handle:
-        magic, count = struct.unpack(">II", handle.read(8))
-        if magic != 2049:
-            raise ValueError(f"unexpected label magic number in {path}: {magic}")
-        data = np.frombuffer(handle.read(), dtype=np.uint8).astype(np.int64).reshape(count)
-    return torch.from_numpy(data)
-
-
-def load_mnist() -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    missing = [name for name in FILES.values() if not (CACHE_DIR / name).exists()]
+def load_mnist() -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    missing = [name for name in SPLIT_FILES.values() if not (CACHE_DIR / name).exists()]
     if missing:
         raise FileNotFoundError(
-            f"MNIST files not found in {CACHE_DIR}. Run `python prepare.py` first."
+            f"Prepared MNIST splits not found in {CACHE_DIR}. Run `python prepare.py` first."
         )
 
-    train_images = _load_images(CACHE_DIR / FILES["train_images"])
-    train_labels = _load_labels(CACHE_DIR / FILES["train_labels"])
-    val_images = _load_images(CACHE_DIR / FILES["val_images"])
-    val_labels = _load_labels(CACHE_DIR / FILES["val_labels"])
-    return train_images, train_labels, val_images, val_labels
+    train_payload = torch.load(CACHE_DIR / SPLIT_FILES["train"], weights_only=True)
+    val_payload = torch.load(CACHE_DIR / SPLIT_FILES["validation"], weights_only=True)
+    test_payload = torch.load(CACHE_DIR / SPLIT_FILES["test"], weights_only=True)
+    return (
+        train_payload["images"],
+        train_payload["labels"],
+        val_payload["images"],
+        val_payload["labels"],
+        test_payload["images"],
+        test_payload["labels"],
+    )
 
 
 def get_device() -> torch.device:
