@@ -1,0 +1,30 @@
+commit	val_acc	memory_gb	status	description
+bf4bf86	0.923400	0.0	keep	baseline
+1af93e9	0.992400	0.0	keep	small CNN with AdamW and longer patience
+5ace20a	0.995700	0.0	keep	add batch norm and label smoothing
+16d0d47	0.995500	0.0	discard	widen normalized CNN
+01d5742	0.996700	0.0	keep	add random translation augmentation
+52a7dec	0.997000	0.0	keep	add rotation to affine augmentation
+afcfbd2	0.997200	0.0	keep	add cosine learning-rate decay
+6d89634	0.996800	0.0	discard	increase translation augmentation
+f27cc5a	0.997100	0.0	discard	reduce classifier dropout
+955310b	0.997100	0.0	discard	reduce batch size to 512
+637e89c	0.997100	0.0	discard	reduce label smoothing
+14a412d	0.997300	0.0	keep	shorten cosine decay horizon
+d56ab93	0.997000	0.0	discard	lower cosine learning-rate floor
+bcecc6c	0.997100	0.0	discard	lower base learning rate
+f66e9c6	0.997300	0.0	discard	relax early stopping patience
+6a7ee90	0.997200	0.0	discard	increase weight decay
+be86f04	0.997500	0.0	keep	increase classifier dropout
+abe52c2	0.996900	0.0	discard	raise classifier dropout again
+5b3b412	0.996700	0.0	discard	shorten cosine decay further
+4b39ea5	0.997000	0.0	discard	increase label smoothing
+e978cc3	0.997000	0.0	discard	lower weight decay
+20158ae	0.997000	0.0	discard	reduce rotation augmentation
+db308e5	0.997300	0.0	discard	raise base learning rate slightly
+3030d19	0.997500	0.0	discard	allow any validation improvement
+494875e	0.996600	0.0	discard	increase batch size to 2048
+86f2ccb	0.997100	0.0	discard	raise cosine learning-rate floor
+95d5fb2	0.997300	0.0	discard	lower AdamW beta2
+b6cac2e	0.997100	0.0	discard	lower AdamW beta1
+aef0b00	0.997100	0.0	discard	shrink classifier head
