@@ -1,4 +1,8 @@
-# autoresearch
+<p align="center">
+  <!-- repo-tagline:start -->
+  <strong>🧪 Let AI agents run autonomous language model training experiments 🤖</strong>
+  <!-- repo-tagline:end -->
+</p>
 
 ![teaser](progress.png)
 
