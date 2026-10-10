@@ -80,6 +80,14 @@ Seeing as there seems to be a lot of interest in tinkering with autoresearch on 
 4. Also in `prepare.py`, you'll want to decrease `EVAL_TOKENS` so that your validation loss is evaluated on a lot less data.
 5. In `train.py`, the primary single knob that controls model complexity is the `DEPTH` (default 8, here). A lot of variables are just functions of this, so e.g. lower it down to e.g. 4.
 6. You'll want to most likely use `WINDOW_PATTERN` of just "L", because "SSSL" uses alternating banded attention pattern that may be very inefficient for you. Try it.
+
+The locked security baseline uses PyTorch 2.13 from PyPI; its Linux wheel uses
+CUDA 13 and requires a compatible NVIDIA driver. When the selected Flash
+Attention repository has no binary for this Torch/CUDA combination, training
+uses PyTorch's SDPA implementation with the same causal, sliding-window and
+grouped-query semantics. This fallback can change throughput, so compare
+experiments on the same backend. `uv run python -m unittest test_attention`
+checks its values and gradients against a dense reference.
 7. You'll want to lower `TOTAL_BATCH_SIZE` a lot, but keep it powers of 2, e.g. down to `2**14` (~16K) or so even, hard to tell.
 
 I think these would be the reasonable hyperparameters to play with. Ask your favorite coding agent for help and copy paste them this guide, as well as the full source code.
